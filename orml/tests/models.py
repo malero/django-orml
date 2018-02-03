@@ -14,3 +14,8 @@ class TestModel(models.Model):
     t = models.PositiveSmallIntegerField(choices=T_CHOICES)
     val = models.IntegerField()
     note = models.CharField(max_length=50, null=True)
+
+
+class TestModelChild(models.Model):
+    parent = models.ForeignKey(TestModel, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)

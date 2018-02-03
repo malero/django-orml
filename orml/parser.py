@@ -1,7 +1,7 @@
 import ply.yacc as yacc
 import collections
 
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.db.models.base import ModelBase
 
 from orml.helpers import App, MultiParser
@@ -147,6 +147,11 @@ def p_accessor(t):
     name = '{}.{}'.format(t[1], t[3])
     if isinstance(t[1], App):
         t[0] = t[1].get_model(t[3])
+    elif isinstance(t[1], QuerySet):
+        if type(t[3]) is list:
+            t[0] = [{n: getattr(m, n) for n in t[3]} for m in t[1]]
+        else:
+            t[0] = [getattr(m, t[3]) for m in t[1]]
     elif type(t[1]) is dict:
         t[0] = t[1].get(t[3])
     else:
