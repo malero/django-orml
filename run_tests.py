@@ -1,10 +1,14 @@
 import django, sys
+import os
 from django.conf import settings
+
+DIRNAME = os.path.dirname(__file__)
 
 settings.configure(DEBUG=True,
                DATABASES={
                     'default': {
                         'ENGINE': 'django.db.backends.sqlite3',
+                        'NAME': os.path.join(DIRNAME, 'database.db'),
                     }
                 },
                INSTALLED_APPS=('django.contrib.auth',
