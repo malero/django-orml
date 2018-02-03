@@ -101,3 +101,7 @@ ENV/
 # development
 .idea/
 .DS_STORE
+
+# ply
+parsetab.py
+parser.out
