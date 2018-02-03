@@ -85,24 +85,24 @@ class TestORML(TestCase):
             name="Test 3 Child"
         )
 
-        query_1 = parser.parse('tests.testmodel{id:1}')
+        query_1 = parser.parse('tests.testmodel{id: 1}')
         self.assertEqual(test_1, query_1[0])
 
-        query_2 = parser.parse('tests.testmodel{id:2}')
+        query_2 = parser.parse('tests.testmodel{id: 2}')
         self.assertEqual(test_2, query_2[0])
 
-        query_3 = parser.parse('tests.testmodel{id:3}')
+        query_3 = parser.parse('tests.testmodel{id: 3}')
         self.assertEqual(test_3, query_3[0])
 
-        query_4 = parser.parse('tests.testmodel{id__in:(1,3)}')
+        query_4 = parser.parse('tests.testmodel{id__in: (1,3)}')
         self.assertEqual(len(query_4), 2)
 
         # Test accessor to value list on QuerySet
-        query_5 = parser.parse('tests.testmodel{id__in:(1,3)}[id]')
+        query_5 = parser.parse('tests.testmodel{id__in: (1,3)}[id]')
         self.assertEqual(query_5, [1, 3])
 
         # Test multi accessor to dict[] on a QuerySet
-        query_6 = parser.parse('tests.testmodel{id__in:(1,3)}[t, val, note]')
+        query_6 = parser.parse('tests.testmodel{id__in: (1,3)}[t, val, note]')
         self.assertEqual(query_6[0]['t'], test_1.t)
         self.assertEqual(query_6[0]['val'], test_1.val)
         self.assertEqual(query_6[0]['note'], test_1.note)
@@ -112,9 +112,16 @@ class TestORML(TestCase):
         self.assertEqual(query_6[1]['note'], test_3.note)
 
         # Nested queries and multiple statements
-        query_7 = parser.parse('tests.testmodelchild{parent__in:(tests.testmodel{id__in:(1,3)}[id])}')
+        query_7 = parser.parse('tests.testmodelchild{parent__in: (tests.testmodel{id__in:(1,3)}[id])}')
         query_8 = parser.parse([
             'parent_ids=tests.testmodel{id__in:(1,3)}[id]',
             'tests.testmodelchild{parent__in:parent_ids}'
         ])
         self.assertEqual(query_7[0], query_8[0])
+
+        # Testing icontains, for fun
+        query_9 = parser.parse('tests.testmodel{note__icontains: test}[id]')
+        self.assertIn(1, query_9)
+        self.assertIn(2, query_9)
+        self.assertIn(3, query_9)
+        self.assertEqual(len(query_9), 3)

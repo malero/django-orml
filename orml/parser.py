@@ -6,9 +6,9 @@ from django.db.models.base import ModelBase
 
 from orml.helpers import App, MultiParser
 from orml.lexer import tokens
+from orml.utils import average
 
 # Parsing rules
-from orml.utils import average
 
 precedence = (
     ('left', 'PLUS', 'MINUS'),
@@ -197,12 +197,3 @@ def parse(statements, user=None):
     global multiparser
     multiparser = MultiParser(parser, user)
     return multiparser.parse(statements)
-
-
-if __name__ == '__main__':
-    while True:
-        try:
-            s = input('calc > ')
-        except EOFError:
-            break
-        print(parser.parse(s))
