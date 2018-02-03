@@ -1,13 +1,14 @@
 import ply.yacc as yacc
 import collections
 
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.db.models.base import ModelBase
 
+from orml.helpers import App, MultiParser
 from orml.lexer import tokens
 
 # Parsing rules
+from orml.utils import average
 
 precedence = (
     ('left', 'PLUS', 'MINUS'),
@@ -19,40 +20,7 @@ precedence = (
     ('right', 'UMINUS'),
 )
 
-# dictionary of names
-names = {}
-
-
-model_names = []
-content_types = []
-
-
-def setup():
-    global model_names
-    global content_types
-    content_types = ContentType.objects.all()
-    model_names = ['{}.{}'.format(t.app_label, t.model) for t in content_types]
-
-
-def is_model(name):
-    if not len(content_types):
-        setup()
-    return name in model_names
-
-
-def get_model(name):
-    if not len(content_types):
-        setup()
-
-    app_label, model_name = name.split('.')
-    for t in content_types:
-        if app_label == t.app_label and model_name == t.model:
-            return t.model_class()
-
-
-def average(numbers):
-    return float(sum(numbers)) / max(len(numbers), 1)
-
+multiparser = None
 
 def p_statement_equals(t):
     'statement : expression EQUALS expression'
@@ -61,7 +29,7 @@ def p_statement_equals(t):
 
 def p_statement_assign(t):
     'statement : NAME ASSIGN expression'
-    names[t[1]] = t[3]
+    multiparser.set(t[1], t[3])
 
 
 def p_statement_expr(t):
@@ -141,11 +109,11 @@ def p_expression_accessor(t):
 
 def p_expression_name(t):
     'expression : NAME'
-    v = t[1]
-    if v in names:
-        t[0] = names[v]
+    name = t[1]
+    if multiparser.has(name):
+        t[0] = multiparser.get(name)
     else:
-        t[0] = v
+        t[0] = name
 
 
 def p_dict(t):
@@ -177,10 +145,10 @@ def p_accessor(t):
                 | expression LBRACKET expression RBRACKET
     """
     name = '{}.{}'.format(t[1], t[3])
-    if hasattr(t[1], t[3]):
-        t[0] = getattr(t[1], t[3])
-    elif is_model(name):
-        t[0] = get_model(name)
+    if isinstance(t[1], App):
+        t[0] = t[1].get_model(t[3])
+    elif type(t[1]) is dict:
+        t[0] = t[1].get(t[3])
     else:
         t[0] = None
 
@@ -220,17 +188,10 @@ def p_error(t):
 parser = yacc.yacc()
 
 
-def parse(queries, user=None):
-    global names
-    names = {}
-    stack = []
-    if type(queries) is str:
-        queries = [queries,]
-    for q in queries:
-        if not q: continue
-        stack.append(parser.parse(q))
-
-    return stack[-1]
+def parse(statements, user=None):
+    global multiparser
+    multiparser = MultiParser(parser, user)
+    return multiparser.parse(statements)
 
 
 if __name__ == '__main__':

@@ -17,7 +17,10 @@ class TestORML(TestCase):
         self.assertEqual(a, 1.49)
 
     def test_assignments(self):
-        a = parser.parse('a=5')
+        a = parser.parse([
+            'a__in=5',
+            'a__in'
+        ])
 
     def test_lists(self):
         a = parser.parse('1,2,3')
@@ -85,3 +88,9 @@ class TestORML(TestCase):
 
         query_3 = parser.parse('tests.testmodel{id:3}')
         self.assertEqual(test_3, query_3[0])
+
+        query_4 = parser.parse('tests.testmodel{id__in:(1,3)}')
+        self.assertEqual(len(query_4), 2)
+
+        query_5 = parser.parse('tests.testmodel{id__in:(1,3)}.id')
+        print(query_5)
