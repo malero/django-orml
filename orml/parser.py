@@ -2,6 +2,8 @@ import ply.yacc as yacc
 import collections
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
+from django.db.models.base import ModelBase
 
 from orml.lexer import tokens
 
@@ -10,8 +12,10 @@ from orml.lexer import tokens
 precedence = (
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE'),
-    ('left', 'COMMA', 'PERIOD', 'AND', 'OR'),
-    ('left', 'COLON'),
+    ('left',  'AND', 'OR'),
+    ('left', 'COMMA', 'PERIOD',),
+    ('left', 'COLON',),
+    ('left', 'SEMICOLON'),
     ('right', 'UMINUS'),
 )
 
@@ -71,10 +75,22 @@ functions = {
 }
 
 
+def p_expression_query_filter(t):
+    'expression : accessor query'
+    if type(t[1]) is ModelBase:
+        t[0] = t[1].objects.filter(t[2])
+
+
 def p_expression_func(t):
     'expression : NAME LPAREN expression RPAREN'
     if t[1] in functions and isinstance(t[3], collections.Iterable):
         t[0] = functions[t[1]](t[3])
+
+
+def p_expression_group(t):
+    """expression : LPAREN expression RPAREN
+    """
+    t[0] = t[2]
 
 
 def p_expression_binop(t):
@@ -82,8 +98,6 @@ def p_expression_binop(t):
                   | expression MINUS expression
                   | expression TIMES expression
                   | expression DIVIDE expression
-                  | expression OR expression
-                  | expression AND expression
     '''
     if t[2] == '+':
         t[0] = t[1] + t[3]
@@ -93,20 +107,11 @@ def p_expression_binop(t):
         t[0] = t[1] * t[3]
     elif t[2] == '/':
         t[0] = t[1] / t[3]
-    elif t[2] == '&':
-        t[0] = t[1] and t[3]
-    elif t[2] in '|':
-        t[0] = t[1] or t[3]
 
 
 def p_expression_uminus(t):
     'expression : MINUS expression %prec UMINUS'
     t[0] = -t[2]
-
-
-def p_expression_group(t):
-    'expression : LPAREN expression RPAREN'
-    t[0] = t[2]
 
 
 def p_expression_number(t):
@@ -121,6 +126,8 @@ def p_expression_list(t):
     """
     expression : list
                | dict
+               | querychain
+               | query
     """
     t[0] = t[1]
 
@@ -142,9 +149,15 @@ def p_expression_name(t):
 
 
 def p_dict(t):
-    'dict : expression COLON expression'
+    'dict : NAME COLON expression'
     t[0] = {}
     t[0][t[1]] = t[3]
+
+
+def p_dict_chain(t):
+    'dict : dict COMMA dict'
+    t[1].update(t[3])
+    t[0] = t[1]
 
 
 def p_list(t):
@@ -155,9 +168,6 @@ def p_list(t):
     elif type(t[3]) is list:
         t[3].insert(0, t[1])
         t[0] = t[3]
-    elif type(t[1]) is dict and type(t[3]) is dict:
-        t[1].update(t[3])
-        t[0] = t[1]
     else:
         t[0] = [t[1], t[3], ]
 
@@ -175,9 +185,32 @@ def p_accessor(t):
         t[0] = None
 
 
+def p_querychain(t):
+    """querychain : dict OR dict"""
+    t[0] = Q(**t[1]) | Q(**t[3])
+
+
+def p_querychain_or_dict(t):
+    """querychain : querychain OR dict
+    """
+    t[0] = t[1] | Q(**t[3])
+
+
+def p_querychain_or_querychain(t):
+    """querychain : querychain OR querychain"""
+    t[0] = t[1] | t[3]
+
+
 def p_query(t):
     """query : LQBRACKET expression RQBRACKET
     """
+    t[0] = t[2]
+
+
+def p_query_dict(t):
+    """query : LQBRACKET dict RQBRACKET
+    """
+    t[0] = Q(**t[2])
 
 
 def p_error(t):
@@ -187,10 +220,17 @@ def p_error(t):
 parser = yacc.yacc()
 
 
-def parse(q):
+def parse(queries, user=None):
     global names
     names = {}
-    return parser.parse(q)
+    stack = []
+    if type(queries) is str:
+        queries = [queries,]
+    for q in queries:
+        if not q: continue
+        stack.append(parser.parse(q))
+
+    return stack[-1]
 
 
 if __name__ == '__main__':

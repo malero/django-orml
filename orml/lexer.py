@@ -1,6 +1,6 @@
 import ply.lex as lex
 tokens = (
-    'NAME', 'COLON', 'COMMA', 'PERIOD', 'OR', 'AND',
+    'NAME', 'COLON', 'SEMICOLON', 'COMMA', 'PERIOD', 'OR', 'AND',
     'FLOAT', 'INT',
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 'ASSIGN',
     'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET', 'LQBRACKET', 'RQBRACKET',
@@ -20,6 +20,7 @@ t_RBRACKET = r'\]'
 t_LQBRACKET = r'\{'
 t_RQBRACKET = r'\}'
 t_COLON = r':'
+t_SEMICOLON = r';'
 t_COMMA = r','
 t_PERIOD = r'\.'
 t_OR = r'\|'
