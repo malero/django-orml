@@ -149,9 +149,9 @@ def p_accessor(t):
         t[0] = t[1].get_model(t[3])
     elif isinstance(t[1], QuerySet):
         if type(t[3]) is list:
-            t[0] = [{n: getattr(m, n) for n in t[3]} for m in t[1]]
+            t[0] = t[1].values(*t[3])
         else:
-            t[0] = [getattr(m, t[3]) for m in t[1]]
+            t[0] = [d.get(t[3]) for d in t[1].values(t[3])]
     elif type(t[1]) is dict:
         t[0] = t[1].get(t[3])
     else:
