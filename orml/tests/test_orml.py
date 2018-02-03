@@ -111,17 +111,18 @@ class TestORML(TestCase):
         self.assertEqual(query_6[1]['val'], test_3.val)
         self.assertEqual(query_6[1]['note'], test_3.note)
 
-        # Nested queries and multiple statements
+        # Nested queries and multiple statements (same query written 3 different ways)
         query_7 = parser.parse('tests.testmodelchild{parent__in: (tests.testmodel{id__in:(1,3)}[id])}')
         query_8 = parser.parse([
             'parent_ids=tests.testmodel{id__in:(1,3)}[id]',
             'tests.testmodelchild{parent__in:parent_ids}'
         ])
-        self.assertEqual(query_7[0], query_8[0])
+        query_9 = parser.parse('tests.testmodelchild{parent_id__in: (1,3)}')
+        self.assertEqual(query_9[0], query_8[0])
 
         # Testing icontains, for fun
-        query_9 = parser.parse('tests.testmodel{note__icontains: test}[id]')
-        self.assertIn(1, query_9)
-        self.assertIn(2, query_9)
-        self.assertIn(3, query_9)
-        self.assertEqual(len(query_9), 3)
+        query_10 = parser.parse('tests.testmodel{note__icontains: test}[id]')
+        self.assertIn(1, query_10)
+        self.assertIn(2, query_10)
+        self.assertIn(3, query_10)
+        self.assertEqual(len(query_10), 3)
