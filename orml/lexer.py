@@ -1,7 +1,7 @@
 import ply.lex as lex
 tokens = (
     'NAME', 'COLON', 'SEMICOLON', 'COMMA', 'PERIOD', 'OR', 'AND',
-    'FLOAT', 'INT',
+    'FLOAT', 'INT', 'STRING',
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 'ASSIGN',
     'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET', 'LQBRACKET', 'RQBRACKET',
 )
@@ -41,6 +41,12 @@ def t_INT(t):
     except ValueError:
         print("Integer value too large %d", t.value)
         t.value = 0
+    return t
+
+
+def t_STRING(t):
+    r'\"[^\"]+\"'
+    t.value = str(t.value[1:-1])
     return t
 
 

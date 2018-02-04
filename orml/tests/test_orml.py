@@ -16,6 +16,10 @@ class TestORML(TestCase):
         a = parser.parse('1.49')
         self.assertEqual(a, 1.49)
 
+    def test_strings(self):
+        a = parser.parse('"string test"')
+        self.assertEqual(a, 'string test')
+
     def test_assignments(self):
         a = parser.parse([
             'a__in=5',
@@ -67,22 +71,22 @@ class TestORML(TestCase):
         test_1 = TestModel.objects.create(
             t=TestModel.T1,
             val=15,
-            note='Test 1'
+            note='Test Model 1'
         )
         test_2 = TestModel.objects.create(
             t=TestModel.T1,
             val=100,
-            note='Test 2'
+            note='Test Model 2'
         )
         test_3 = TestModel.objects.create(
             t=TestModel.T2,
             val=1,
-            note='Test 3'
+            note='Test Model 3'
         )
 
         test_3_child = TestModelChild.objects.create(
             parent=test_3,
-            name="Test 3 Child"
+            name="Test Model 3 Child"
         )
 
         query_1 = parser.parse('tests.testmodel{id: 1}')
@@ -121,7 +125,7 @@ class TestORML(TestCase):
         self.assertEqual(query_9[0], query_8[0])
 
         # Testing icontains, for fun
-        query_10 = parser.parse('tests.testmodel{note__icontains: test}[id]')
+        query_10 = parser.parse('tests.testmodel{note__icontains: "test model"}[id]')
         self.assertIn(1, query_10)
         self.assertIn(2, query_10)
         self.assertIn(3, query_10)

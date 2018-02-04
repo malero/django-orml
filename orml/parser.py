@@ -82,10 +82,11 @@ def p_expression_uminus(t):
     t[0] = -t[2]
 
 
-def p_expression_number(t):
+def p_expression_vars(t):
     """
     expression : FLOAT
                | INT
+               | STRING
     """
     t[0] = t[1]
 
