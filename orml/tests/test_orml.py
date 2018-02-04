@@ -43,11 +43,11 @@ class TestORML(TestCase):
         self.assertEqual(d['c'], [3,4,5])
 
     def test_sum_with_list(self):
-        a = parser.parse('SUM(1,2,3)')
+        a = parser.parse('sum(1,2,3)')
         self.assertEqual(6, a)
 
     def test_avg_with_list(self):
-        a = parser.parse('AVG(0,5,10)')
+        a = parser.parse('average(0,5,10)')
         self.assertEqual(a, 5)
 
     def test_equals(self):
@@ -130,3 +130,27 @@ class TestORML(TestCase):
         self.assertIn(2, query_10)
         self.assertIn(3, query_10)
         self.assertEqual(len(query_10), 3)
+
+    def test_aggregates(self):
+        test_1 = TestModel.objects.create(
+            t=TestModel.T1,
+            val=10,
+            note='Test Model 1'
+        )
+        test_2 = TestModel.objects.create(
+            t=TestModel.T1,
+            val=30,
+            note='Test Model 2'
+        )
+        test_3 = TestModel.objects.create(
+            t=TestModel.T2,
+            val=50,
+            note='Test Model 3'
+        )
+
+        a = parser.parse('tests.testmodel{note__icontains: "test model"}[avg:Avg(val), sum:Sum(val), min:Min(val), max:Max(val), count:Count(id)]')
+        self.assertEqual(a['avg'], 30)
+        self.assertEqual(a['sum'], 90)
+        self.assertEqual(a['min'], 10)
+        self.assertEqual(a['max'], 50)
+        self.assertEqual(a['count'], 3)

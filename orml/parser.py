@@ -1,7 +1,7 @@
 import ply.yacc as yacc
 import collections
 
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Avg, Sum, Aggregate, Count, Max, Min
 from django.db.models.base import ModelBase
 
 from orml.helpers import App, MultiParser
@@ -38,8 +38,16 @@ def p_statement_expr(t):
 
 
 functions = {
-    'SUM': sum,
-    'AVG': average
+    # Aggregates
+    'Sum': Sum,
+    'Avg': Avg,
+    'Count': Count,
+    'Max': Max,
+    'Min': Min,
+
+    # Misc functions
+    'sum': sum,
+    'average': average
 }
 
 
@@ -51,7 +59,7 @@ def p_expression_query_filter(t):
 
 def p_expression_func(t):
     'expression : NAME LPAREN expression RPAREN'
-    if t[1] in functions and isinstance(t[3], collections.Iterable):
+    if t[1] in functions:
         t[0] = functions[t[1]](t[3])
 
 
@@ -150,9 +158,27 @@ def p_accessor(t):
         t[0] = t[1].get_model(t[3])
     elif isinstance(t[1], QuerySet):
         if type(t[3]) is list:
-            t[0] = t[1].values(*t[3])
+            values = []
+            aggregates = []
+            for v in t[3]:
+                if type(v) is str:
+                    values.append(v)
+                elif isinstance(v, Aggregate):
+                    aggregates.append(v)
+
+            if len(values):
+                t[1] = t[1].values(*values)
+            if len(aggregates):
+                t[1] = t[1].aggregate(*aggregates)
+            t[0] = t[1]
         else:
-            t[0] = [d.get(t[3]) for d in t[1].values(t[3])]
+            if type(t[3]) is str:
+                t[0] = [d.get(t[3]) for d in t[1].values(t[3])]
+            elif type(t[3]) is dict:
+                t[0] = t[1].aggregate(**t[3])
+            elif isinstance(t[3], Aggregate):
+                t[0] = t[1].aggregate(t[3])
+
     elif type(t[1]) is dict:
         t[0] = t[1].get(t[3])
     else:
