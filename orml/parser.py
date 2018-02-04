@@ -6,16 +6,16 @@ from django.db.models.base import ModelBase
 
 from orml.helpers import App, MultiParser
 from orml.lexer import tokens
-from orml.utils import average
+from orml.utils import average, max_float, count_distinct
 
 # Parsing rules
 
 precedence = (
-    ('left', 'PLUS', 'MINUS'),
-    ('left', 'TIMES', 'DIVIDE'),
     ('left',  'AND', 'OR'),
     ('left', 'COMMA', 'PERIOD',),
     ('left', 'COLON',),
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIVIDE'),
     ('left', 'SEMICOLON'),
     ('right', 'UMINUS'),
 )
@@ -42,7 +42,9 @@ functions = {
     'Sum': Sum,
     'Avg': Avg,
     'Count': Count,
+    'CountDistinct': count_distinct,
     'Max': Max,
+    'MaxFloat': max_float,
     'Min': Min,
 
     # Misc functions
