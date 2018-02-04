@@ -226,7 +226,7 @@ class TestORML(TestCase):
             ]""")
         self.assertEqual(len(a), 2)
         for r in a:
-            if r['t'] == 0:
+            if r['t'] == TestModel.T1:
                 self.assertEqual(r['avg'], 20.0)
                 self.assertEqual(r['count'], 2)
             else:

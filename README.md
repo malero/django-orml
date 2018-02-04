@@ -31,4 +31,3 @@ my_app.mymodelchild{parent__in:parents}
 ### Upcoming Features
 
 * Date values
-* Aggregation and annotation
