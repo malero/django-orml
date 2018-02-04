@@ -4,9 +4,10 @@ import collections
 from django.db.models import Q, QuerySet, Avg, Sum, Aggregate, Count, Max, Min
 from django.db.models.base import ModelBase
 
-from orml.helpers import App, MultiParser
+from orml.helpers import App, MultiParser, ArgsKwargs
 from orml.lexer import tokens
-from orml.utils import average, max_float, count_distinct
+from orml.utils import average, max_float, count_distinct, \
+    split_queryset_arguments, count_all
 
 # Parsing rules
 
@@ -42,6 +43,7 @@ functions = {
     'Sum': Sum,
     'Avg': Avg,
     'Count': Count,
+    'CountAll': count_all,
     'CountDistinct': count_distinct,
     'Max': Max,
     'MaxFloat': max_float,
@@ -60,9 +62,14 @@ def p_expression_query_filter(t):
 
 
 def p_expression_func(t):
-    'expression : NAME LPAREN expression RPAREN'
+    """expression : NAME LPAREN expression RPAREN
+                  | NAME LPAREN RPAREN
+    """
     if t[1] in functions:
-        t[0] = functions[t[1]](t[3])
+        if t[3] == ')':
+            t[0] = functions[t[1]]()
+        else:
+            t[0] = functions[t[1]](t[3])
 
 
 def p_expression_group(t):
@@ -92,18 +99,12 @@ def p_expression_uminus(t):
     t[0] = -t[2]
 
 
-def p_expression_vars(t):
+def p_expression_types(t):
     """
     expression : FLOAT
                | INT
                | STRING
-    """
-    t[0] = t[1]
-
-
-def p_expression_list(t):
-    """
-    expression : list
+               | list
                | dict
                | querychain
                | query
@@ -141,7 +142,12 @@ def p_dict_chain(t):
 
 def p_list(t):
     'list : expression COMMA expression'
-    if type(t[1]) is list:
+    if type(t[1]) is list and type(t[3]) is dict:
+        argskwargs = ArgsKwargs()
+        argskwargs.add(t[1])
+        argskwargs.add(t[3])
+        t[0] = argskwargs
+    elif type(t[1]) is list:
         t[1].append(t[3])
         t[0] = t[1]
     elif type(t[3]) is list:
@@ -155,32 +161,26 @@ def p_accessor(t):
     """accessor : expression PERIOD expression
                 | expression LBRACKET expression RBRACKET
     """
-    name = '{}.{}'.format(t[1], t[3])
     if isinstance(t[1], App):
         t[0] = t[1].get_model(t[3])
     elif isinstance(t[1], QuerySet):
-        if type(t[3]) is list:
-            values = []
-            aggregates = []
-            for v in t[3]:
-                if type(v) is str:
-                    values.append(v)
-                elif isinstance(v, Aggregate):
-                    aggregates.append(v)
-
-            if len(values):
+        values, aggregate_args, aggregate_kwargs = split_queryset_arguments(t[3])
+        distinct = False
+        if len(values):
+            if 'distinct' in values:
+                values.remove('distinct')
+                t[1] = t[1].values(*values).distinct()
+                distinct = True
+            else:
                 t[1] = t[1].values(*values)
-            if len(aggregates):
-                t[1] = t[1].aggregate(*aggregates)
-            t[0] = t[1]
-        else:
-            if type(t[3]) is str:
-                t[0] = [d.get(t[3]) for d in t[1].values(t[3])]
-            elif type(t[3]) is dict:
-                t[0] = t[1].aggregate(**t[3])
-            elif isinstance(t[3], Aggregate):
-                t[0] = t[1].aggregate(t[3])
 
+        if len(aggregate_args) or len(aggregate_kwargs):
+            if distinct:
+                t[1] = t[1].annotate(*aggregate_args, **aggregate_kwargs)
+            else:
+                t[1] = t[1].aggregate(*aggregate_args, **aggregate_kwargs)
+
+        t[0] = t[1]
     elif type(t[1]) is dict:
         t[0] = t[1].get(t[3])
     else:

@@ -1,6 +1,5 @@
 from unittest import skip
 
-from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from orml import parser
@@ -103,7 +102,8 @@ class TestORML(TestCase):
 
         # Test accessor to value list on QuerySet
         query_5 = parser.parse('tests.testmodel{id__in: (1,3)}[id]')
-        self.assertEqual(query_5, [1, 3])
+        self.assertEqual(query_5[0]['id'], 1)
+        self.assertEqual(query_5[1]['id'], 3)
 
         # Test multi accessor to dict[] on a QuerySet
         query_6 = parser.parse('tests.testmodel{id__in: (1,3)}[t, val, note]')
@@ -126,10 +126,11 @@ class TestORML(TestCase):
 
         # Testing icontains, for fun
         query_10 = parser.parse('tests.testmodel{note__icontains: "test model"}[id]')
-        self.assertIn(1, query_10)
-        self.assertIn(2, query_10)
-        self.assertIn(3, query_10)
-        self.assertEqual(len(query_10), 3)
+        ids = [t['id'] for t in query_10]
+        self.assertIn(1, ids)
+        self.assertIn(2, ids)
+        self.assertIn(3, ids)
+        self.assertEqual(len(ids), 3)
 
     def test_aggregates(self):
         test_1 = TestModel.objects.create(
@@ -152,14 +153,13 @@ class TestORML(TestCase):
             tests.testmodel{note__icontains: "test model"}
             [
                 diff: (MaxFloat(val) - Avg(val)),
-                avg:Avg(val),
-                sum:Sum(val),
-                min:Min(val),
-                max:Max(val),
-                count:Count(id),
-                t_distinct:CountDistinct(t)
-            ]
-        """)
+                avg: Avg(val),
+                sum: Sum(val),
+                min: Min(val),
+                max: Max(val),
+                count: Count(id),
+                t_distinct: CountDistinct(t)
+            ]""")
         self.assertEqual(a['diff'], 20.0)
         self.assertEqual(a['avg'], 30)
         self.assertEqual(a['sum'], 90)
@@ -167,3 +167,68 @@ class TestORML(TestCase):
         self.assertEqual(a['max'], 50)
         self.assertEqual(a['count'], 3)
         self.assertEqual(a['t_distinct'], 2)
+
+    def test_argskwargs(self):
+        test_1 = TestModel.objects.create(
+            t=TestModel.T1,
+            val=10,
+            note='Test Model 1'
+        )
+        test_2 = TestModel.objects.create(
+            t=TestModel.T1,
+            val=30,
+            note='Test Model 2'
+        )
+        test_3 = TestModel.objects.create(
+            t=TestModel.T2,
+            val=50,
+            note='Test Model 3'
+        )
+
+        a = parser.parse("""
+            tests.testmodel{note__icontains: "test model"}
+            [
+                Avg(val),
+                Sum(val),
+                min: Min(val),
+                max: Max(val)
+            ]""")
+
+        self.assertEqual(a['val__avg'], 30)
+        self.assertEqual(a['val__sum'], 90)
+        self.assertEqual(a['min'], 10)
+        self.assertEqual(a['max'], 50)
+
+    def test_distinct(self):
+        test_1 = TestModel.objects.create(
+            t=TestModel.T1,
+            val=10,
+            note='Test Model 1'
+        )
+        test_2 = TestModel.objects.create(
+            t=TestModel.T1,
+            val=30,
+            note='Test Model 2'
+        )
+        test_3 = TestModel.objects.create(
+            t=TestModel.T2,
+            val=50,
+            note='Test Model 3'
+        )
+
+        a = parser.parse("""
+            tests.testmodel{note__icontains: "test model"}
+            [
+                distinct,
+                t,
+                avg: Avg(val),
+                count: Count("*")
+            ]""")
+        self.assertEqual(len(a), 2)
+        for r in a:
+            if r['t'] == 0:
+                self.assertEqual(r['avg'], 20.0)
+                self.assertEqual(r['count'], 2)
+            else:
+                self.assertEqual(r['avg'], 50.0)
+                self.assertEqual(r['count'], 1)

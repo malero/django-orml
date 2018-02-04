@@ -89,3 +89,18 @@ class MultiParser:
 
     def set(self, name, var):
         self.public[name] = var
+
+
+class ArgsKwargs:
+    def __init__(self):
+        self.args = []
+        self.kwargs = {}
+
+    def add(self, a):
+        if type(a) is list:
+            self.args += a
+        elif type(a) is dict:
+            self.kwargs.update(a)
+        elif isinstance(a, ArgsKwargs):
+            self.args += a.args
+            self.kwargs.update(a.kwargs)
