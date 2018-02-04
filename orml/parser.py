@@ -1,21 +1,22 @@
 import ply.yacc as yacc
 import collections
 
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Avg, Sum, Aggregate, Count, Max, Min
 from django.db.models.base import ModelBase
 
-from orml.helpers import App, MultiParser
+from orml.helpers import App, MultiParser, ArgsKwargs
 from orml.lexer import tokens
-from orml.utils import average
+from orml.utils import average, max_float, count_distinct, \
+    split_queryset_arguments, count_all
 
 # Parsing rules
 
 precedence = (
-    ('left', 'PLUS', 'MINUS'),
-    ('left', 'TIMES', 'DIVIDE'),
     ('left',  'AND', 'OR'),
     ('left', 'COMMA', 'PERIOD',),
     ('left', 'COLON',),
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIVIDE'),
     ('left', 'SEMICOLON'),
     ('right', 'UMINUS'),
 )
@@ -38,8 +39,19 @@ def p_statement_expr(t):
 
 
 functions = {
-    'SUM': sum,
-    'AVG': average
+    # Aggregates
+    'Sum': Sum,
+    'Avg': Avg,
+    'Count': Count,
+    'CountAll': count_all,
+    'CountDistinct': count_distinct,
+    'Max': Max,
+    'MaxFloat': max_float,
+    'Min': Min,
+
+    # Misc functions
+    'sum': sum,
+    'average': average
 }
 
 
@@ -50,9 +62,14 @@ def p_expression_query_filter(t):
 
 
 def p_expression_func(t):
-    'expression : NAME LPAREN expression RPAREN'
-    if t[1] in functions and isinstance(t[3], collections.Iterable):
-        t[0] = functions[t[1]](t[3])
+    """expression : NAME LPAREN expression RPAREN
+                  | NAME LPAREN RPAREN
+    """
+    if t[1] in functions:
+        if t[3] == ')':
+            t[0] = functions[t[1]]()
+        else:
+            t[0] = functions[t[1]](t[3])
 
 
 def p_expression_group(t):
@@ -82,18 +99,12 @@ def p_expression_uminus(t):
     t[0] = -t[2]
 
 
-def p_expression_vars(t):
+def p_expression_types(t):
     """
     expression : FLOAT
                | INT
                | STRING
-    """
-    t[0] = t[1]
-
-
-def p_expression_list(t):
-    """
-    expression : list
+               | list
                | dict
                | querychain
                | query
@@ -131,7 +142,12 @@ def p_dict_chain(t):
 
 def p_list(t):
     'list : expression COMMA expression'
-    if type(t[1]) is list:
+    if type(t[1]) is list and type(t[3]) is dict:
+        argskwargs = ArgsKwargs()
+        argskwargs.add(t[1])
+        argskwargs.add(t[3])
+        t[0] = argskwargs
+    elif type(t[1]) is list:
         t[1].append(t[3])
         t[0] = t[1]
     elif type(t[3]) is list:
@@ -145,14 +161,26 @@ def p_accessor(t):
     """accessor : expression PERIOD expression
                 | expression LBRACKET expression RBRACKET
     """
-    name = '{}.{}'.format(t[1], t[3])
     if isinstance(t[1], App):
         t[0] = t[1].get_model(t[3])
     elif isinstance(t[1], QuerySet):
-        if type(t[3]) is list:
-            t[0] = t[1].values(*t[3])
-        else:
-            t[0] = [d.get(t[3]) for d in t[1].values(t[3])]
+        values, aggregate_args, aggregate_kwargs = split_queryset_arguments(t[3])
+        distinct = False
+        if len(values):
+            if 'distinct' in values:
+                values.remove('distinct')
+                t[1] = t[1].values(*values).distinct()
+                distinct = True
+            else:
+                t[1] = t[1].values(*values)
+
+        if len(aggregate_args) or len(aggregate_kwargs):
+            if distinct:
+                t[1] = t[1].annotate(*aggregate_args, **aggregate_kwargs)
+            else:
+                t[1] = t[1].aggregate(*aggregate_args, **aggregate_kwargs)
+
+        t[0] = t[1]
     elif type(t[1]) is dict:
         t[0] = t[1].get(t[3])
     else:
