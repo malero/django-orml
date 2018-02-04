@@ -13,7 +13,7 @@ my_app.mymodel{id__in:(1,3)}
 **Queries with | operator**
 ```
 # Will return all MyModel instances with "term" in the name or description
-my_app.mymodel{name__icontains: "term" | description_icontains: "term" }
+my_app.mymodel{name__icontains: "term" | description_icontains: "term"}
 ```
 
 **Nested Queries**

@@ -1,16 +1,23 @@
+import dj_database_url
 import django, sys
 import os
 from django.conf import settings
 
 DIRNAME = os.path.dirname(__file__)
 
-settings.configure(DEBUG=True,
-               DATABASES={
+DATABASE_URL = os.environ.get('DATABSE_URL', None)
+if DATABASE_URL is None:
+    DATABASES = {
                     'default': {
                         'ENGINE': 'django.db.backends.sqlite3',
                         'NAME': os.path.join(DIRNAME, 'database.db'),
                     }
-                },
+                }
+else:
+    DATABASES = {'default': dj_database_url.config(default=DATABASE_URL)}
+
+settings.configure(DEBUG=True,
+               DATABASES=DATABASES,
                INSTALLED_APPS=('django.contrib.auth',
                               'django.contrib.contenttypes',
                               'orml',
