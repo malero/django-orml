@@ -10,4 +10,5 @@ setup(
   download_url = 'https://github.com/malero/django-orml/archive/0.1.tar.gz',
   keywords = ['django', 'orm', 'ply'],
   classifiers = [],
+  install_requires=['ply==3.10',],
 )
