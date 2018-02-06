@@ -3,6 +3,7 @@ import collections
 
 from django.db.models import Q, QuerySet, Avg, Sum, Aggregate, Count, Max, Min
 from django.db.models.base import ModelBase
+from django.forms import model_to_dict
 
 from orml.helpers import App, MultiParser, ArgsKwargs
 from orml.lexer import tokens
@@ -180,7 +181,11 @@ def p_accessor(t):
             else:
                 t[1] = t[1].aggregate(*aggregate_args, **aggregate_kwargs)
 
-        t[0] = t[1]
+        # Convert models to dicts
+        if isinstance(t[1], QuerySet) and isinstance(t[1][0], ModelBase):
+            t[0] = [model_to_dict(m) for m in t[1]]
+        else:
+            t[0] = t[1]
     elif type(t[1]) is dict:
         t[0] = t[1].get(t[3])
     else:

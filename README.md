@@ -2,15 +2,11 @@
 
 django-orml is a simple querying language for the Django ORM. Initial syntax implementation is focused on saving and executing simple queries for report building. It is not yet completed, but here is some current and upcoming syntax:
 
-### Instalation
-
-```pip install django-orml```
-
 ### Currently Implemented Syntax
 
 **Simple ORM filter**
 
-Will return <QuerySet [<MyModel object (1)>, <MyModel object (3)>]>
+Will return list of dicts with data for MyModel.pk 1 and 3
 ```
 my_app.mymodel{id__in:(1,3)}
 ```
@@ -20,18 +16,6 @@ my_app.mymodel{id__in:(1,3)}
 Will return all MyModel instances with "term" in the name or description
 ```
 my_app.mymodel{name__icontains: "term" | description__icontains: "term"}
-```
-
-**Nested Queries**
-Will return children of MyModel with id of 1 and 3
-```
-my_app.mymodelchild{parent__in:(my_app.mymodel{id__in:(1,3)})}
-```
-
-Same query on multiple lines
-```
-parents = my_app.mymodel{id__in:(1,3)}
-my_app.mymodelchild{parent__in:parents}
 ```
 
 **Aggregation and Annotation**
@@ -61,3 +45,9 @@ tests.testmodel{client_id=15}
 ### Upcoming Features
 
 * Date values
+* Model permissions based on Django Auth Groups/Permissions
+
+
+### Instalation
+
+```pip install django-orml```
