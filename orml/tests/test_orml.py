@@ -35,6 +35,13 @@ class TestORML(TestCase):
         self.assertEqual(d['b'], 2)
         self.assertEqual(d['c'], 3)
 
+    def test_assigned_dicts(self):
+        v = parser.parse([
+            'a = a:1,b:2,c:3',
+            'a.b'
+        ])
+        self.assertEqual(v, 2)
+
     def test_dict_list(self):
         d = parser.parse('a:(1,2,3),b:(2,3,4),c:(3,4,5)')
         self.assertEqual(d['a'], [1,2,3])

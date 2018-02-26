@@ -1,6 +1,22 @@
+try:
+    from dateparser import parser as parse_date
+except ModuleNotFoundError:
+    from django.utils.dateparse import parse_date
+
 from django.db.models import Max, FloatField, Count, Aggregate
 
 from orml.helpers import ArgsKwargs
+
+
+def model_fields(model):
+    fields = []
+    for field in model._meta.fields:
+        # Related model
+        # f.related_model._meta.model_name
+        # Related model app label
+        # f.related_model._meta.app_label
+        fields.append((field.column, type(field).__name__))
+    return fields
 
 
 def average(numbers):
@@ -17,6 +33,10 @@ def count_all():
 
 def count_distinct(name):
     return Count(name, distinct=True)
+
+
+def date(str_date):
+    return parse_date(str_date)
 
 
 def split_queryset_arguments(t):

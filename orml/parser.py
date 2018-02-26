@@ -5,7 +5,7 @@ from django.db.models import Q, QuerySet, Avg, Sum, Aggregate, Count, Max, Min
 from django.db.models.base import ModelBase
 from django.forms import model_to_dict
 
-from orml.helpers import App, MultiParser, ArgsKwargs
+from orml.helpers import App, MultiParser, ArgsKwargs, Scope
 from orml.lexer import tokens
 from orml.utils import average, max_float, count_distinct, \
     split_queryset_arguments, count_all
@@ -56,8 +56,22 @@ functions = {
 }
 
 
+def p_scope(t):
+    """scope : NAME PERIOD NAME
+             | scope PERIOD NAME
+    """
+    if type(t[1]) is str:
+        name = t[1]
+        if multiparser.has(name):
+            scope = multiparser.get(name)
+            if isinstance(scope, Scope) or isinstance(scope, dict):
+                t[0] = scope.get(t[3])
+    else:
+        t[0] = t[1].get(t[3])
+
+
 def p_expression_query_filter(t):
-    'expression : accessor query'
+    'expression : scope query'
     if type(t[1]) is ModelBase:
         t[0] = t[1].objects.filter(t[2])
 
@@ -109,6 +123,7 @@ def p_expression_types(t):
                | dict
                | querychain
                | query
+               | scope
     """
     t[0] = t[1]
 
@@ -121,7 +136,7 @@ def p_expression_accessor(t):
 
 
 def p_expression_name(t):
-    'expression : NAME'
+    """expression : NAME"""
     name = t[1]
     if multiparser.has(name):
         t[0] = multiparser.get(name)
@@ -159,12 +174,9 @@ def p_list(t):
 
 
 def p_accessor(t):
-    """accessor : expression PERIOD expression
-                | expression LBRACKET expression RBRACKET
+    """accessor : expression LBRACKET expression RBRACKET
     """
-    if isinstance(t[1], App):
-        t[0] = t[1].get_model(t[3])
-    elif isinstance(t[1], QuerySet):
+    if isinstance(t[1], QuerySet):
         values, aggregate_args, aggregate_kwargs = split_queryset_arguments(t[3])
         distinct = False
         if len(values):

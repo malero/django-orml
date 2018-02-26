@@ -1,8 +1,26 @@
 from django.contrib.contenttypes.models import ContentType
 
 
-class App:
+class Scope:
+    def __init__(self):
+        self.data = {}
+
+    def has(self, name):
+        if name in self.data:
+            return True
+        return False
+
+    def get(self, name):
+        if name in self.data:
+            return self.data[name]
+
+    def set(self, name, var):
+        self.data[name] = var
+
+
+class App(Scope):
     def __init__(self, label):
+        super(App, self).__init__()
         self.label = label
         self.models = []
         self.model_names = []
@@ -10,6 +28,7 @@ class App:
     def add_model(self, model):
         self.model_names.append(model.model)
         self.models.append(model)
+        self.set(model.model, model.model_class())
 
     def is_model(self, name):
         return name in self.model_names
