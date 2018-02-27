@@ -1,8 +1,21 @@
 from distutils.core import setup
+from pkgutil import walk_packages
+
+import orml
+
+
+def find_packages(path, prefix=""):
+    yield prefix
+    prefix = prefix + "."
+    for _, name, ispkg in walk_packages(path, prefix):
+        if ispkg:
+            yield name
+
+
 setup(
   name = 'django-orml',
-  packages = ['orml'],
-  version = '0.1.2',
+  packages = list(find_packages(orml.__path__, orml.__name__)),
+  version = '0.1.3',
   description = 'Django Object Relational Mapping Language',
   author = 'Matt Roberts',
   author_email = 'contact@maleero.com',
