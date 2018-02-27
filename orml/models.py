@@ -7,7 +7,11 @@ from django.db import models
 class Query(models.Model):
     name = models.CharField(max_length=128)
     query = models.TextField()
-    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
 
 
 class QueryParameter(models.Model):
@@ -32,6 +36,9 @@ class QueryParameter(models.Model):
     is_array = models.BooleanField(default=False)
     param_type = models.PositiveSmallIntegerField(choices=TYPE_CHOICES)
 
+    def __str__(self):
+        return self.name
+
 
 class Snapshot(models.Model):
     name = models.CharField(max_length=32)
@@ -41,6 +48,9 @@ class Snapshot(models.Model):
     meta_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
                                           null=True, blank=True)
     meta_object_key = models.CharField(max_length=32, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
 
 
 class SnapshotMeta(models.Model):
