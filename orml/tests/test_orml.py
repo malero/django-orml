@@ -156,7 +156,7 @@ class TestORML(TestCase):
             note='Test Model 3'
         )
 
-        a = parser.parse("""
+        a = parser.parse(["""
             tests.testmodel{note__icontains: "test model"}
             [
                 diff: (MaxFloat(val) - Avg(val)),
@@ -166,7 +166,7 @@ class TestORML(TestCase):
                 max: Max(val),
                 count: Count(id),
                 t_distinct: CountDistinct(t)
-            ]""")
+            ]""", ])
         self.assertEqual(a['diff'], 20.0)
         self.assertEqual(a['avg'], 30)
         self.assertEqual(a['sum'], 90)
@@ -192,14 +192,14 @@ class TestORML(TestCase):
             note='Test Model 3'
         )
 
-        a = parser.parse("""
+        a = parser.parse(["""
             tests.testmodel{note__icontains: "test model"}
             [
                 Avg(val),
                 Sum(val),
                 min: Min(val),
                 max: Max(val)
-            ]""")
+            ]""", ])
 
         self.assertEqual(a['val__avg'], 30)
         self.assertEqual(a['val__sum'], 90)
@@ -223,14 +223,14 @@ class TestORML(TestCase):
             note='Test Model 3'
         )
 
-        a = parser.parse("""
+        a = parser.parse(["""
             tests.testmodel{note__icontains: "test model"}
             [
                 distinct,
                 t,
                 avg: Avg(val),
                 count: Count("*")
-            ]""")
+            ]""", ])
         self.assertEqual(len(a), 2)
         for r in a:
             if r['t'] == TestModel.T1:
