@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'django-orml',
   packages = ['orml'],
-  version = '0.1.1',
+  version = '0.1.2',
   description = 'Django Object Relational Mapping Language',
   author = 'Matt Roberts',
   author_email = 'contact@maleero.com',
