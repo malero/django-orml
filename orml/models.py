@@ -57,7 +57,7 @@ class SnapshotMeta(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     obj = GenericForeignKey('content_type', 'object_id')
-    json_data = models.TextField()
+    json_data = models.TextField(blank=True, null=True)
 
     class Meta:
         unique_together = (('content_type', 'object_id'),)

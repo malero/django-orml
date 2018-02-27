@@ -194,7 +194,7 @@ def p_accessor(t):
                 t[1] = t[1].aggregate(*aggregate_args, **aggregate_kwargs)
 
         # Convert models to dicts
-        if isinstance(t[1], QuerySet) and isinstance(t[1][0], ModelBase):
+        if isinstance(t[1][0], ModelBase):
             t[0] = [model_to_dict(m) for m in t[1]]
         else:
             t[0] = t[1]

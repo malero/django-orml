@@ -80,7 +80,7 @@ class MultiParser:
 
     def parse(self, statements):
         if type(statements) is str:
-            statements = [statements, ]
+            statements = statements.split('\n')
         for s in statements:
             if not s: continue
             self.stack.append(self.parser.parse(s))
