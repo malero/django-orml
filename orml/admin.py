@@ -5,7 +5,7 @@ from orml.models import Query, Snapshot, QueryParameter, SnapshotMeta
 
 @admin.register(Query)
 class QueryAdmin(admin.ModelAdmin):
-    pass
+    raw_id_fields = ['creator', ]
 
 
 @admin.register(QueryParameter)
