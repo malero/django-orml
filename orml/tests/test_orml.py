@@ -26,34 +26,48 @@ class TestORML(TestCase):
         ])
 
     def test_lists(self):
-        a = parser.parse('1,2,3')
+        a = parser.parse('[1,2,3]')
         self.assertEqual(a, [1,2,3,])
 
     def test_dicts(self):
-        d = parser.parse('a:1,b:2,c:3')
+        d = parser.parse('{a:1,b:2,c:3}')
         self.assertEqual(d['a'], 1)
         self.assertEqual(d['b'], 2)
         self.assertEqual(d['c'], 3)
 
     def test_assigned_dicts(self):
         v = parser.parse([
-            'a = a:1,b:2,c:3',
+            'a = {a:1,b:2,c:3}',
             'a.b'
         ])
         self.assertEqual(v, 2)
 
     def test_dict_list(self):
-        d = parser.parse('a:(1,2,3),b:(2,3,4),c:(3,4,5)')
+        d = parser.parse('{a:[1,2,3],b:[2,3,4],c:[3,4,5]}')
         self.assertEqual(d['a'], [1,2,3])
         self.assertEqual(d['b'], [2,3,4])
         self.assertEqual(d['c'], [3,4,5])
 
+    def test_piped_dict(self):
+        d = parser.parse([
+            'a=[{a:1,b:2}, {a:15,b:30}, {a:50,b:100}, {a:500,b:1000}]',
+            'a@b'
+        ])
+        self.assertEqual(d, [2, 30, 100, 1000])
+
+    @skip("does not work, will have to be implemented later")
+    def test_piped_list(self):
+        d = parser.parse([
+            '[[1,2,3], [2,3,4], [3,4,5], [4,5,6]]'
+        ])
+        self.assertEqual(d, [1, 2, 3, 4])
+
     def test_sum_with_list(self):
-        a = parser.parse('sum(1,2,3)')
+        a = parser.parse('sum([1,2,3])')
         self.assertEqual(6, a)
 
     def test_avg_with_list(self):
-        a = parser.parse('average(0,5,10)')
+        a = parser.parse('average([0,5,10])')
         self.assertEqual(a, 5)
 
     def test_equals(self):
@@ -71,7 +85,7 @@ class TestORML(TestCase):
         self.assertEqual(TestModel, model)
 
     def test_querychain(self):
-        a = parser.parse('id:3 | val:15, id:2 | id:1')
+        a = parser.parse('{id:3} | {val:15, id:2} | {id:1}')
 
     def test_model_filtering(self):
         test_1 = TestModel.objects.create(
@@ -104,16 +118,16 @@ class TestORML(TestCase):
         query_3 = parser.parse('tests.testmodel{id: 3}')
         self.assertEqual(test_3, query_3[0])
 
-        query_4 = parser.parse('tests.testmodel{id__in: (1,3)}')
+        query_4 = parser.parse('tests.testmodel{id__in: [1,3]}')
         self.assertEqual(len(query_4), 2)
 
         # Test accessor to value list on QuerySet
-        query_5 = parser.parse('tests.testmodel{id__in: (1,3)}[id]')
+        query_5 = parser.parse('tests.testmodel{id__in: [1,3]}[id]')
         self.assertEqual(query_5[0]['id'], 1)
         self.assertEqual(query_5[1]['id'], 3)
 
         # Test multi accessor to dict[] on a QuerySet
-        query_6 = parser.parse('tests.testmodel{id__in: (1,3)}[t, val, note]')
+        query_6 = parser.parse('tests.testmodel{id__in: [1,3]}[t, val, note]')
         self.assertEqual(query_6[0]['t'], test_1.t)
         self.assertEqual(query_6[0]['val'], test_1.val)
         self.assertEqual(query_6[0]['note'], test_1.note)
@@ -123,12 +137,13 @@ class TestORML(TestCase):
         self.assertEqual(query_6[1]['note'], test_3.note)
 
         # Nested queries and multiple statements (same query written 3 different ways)
-        query_7 = parser.parse('tests.testmodelchild{parent__in: (tests.testmodel{id__in:(1,3)}[id])}')
+        query_7 = parser.parse('tests.testmodelchild{parent__in: (tests.testmodel{id__in:[1,3]}[id]@id)}')
         query_8 = parser.parse([
-            'parent_ids=tests.testmodel{id__in:(1,3)}[id]',
+            'parent_ids=tests.testmodel{id__in:[1,3]}[id]',
             'tests.testmodelchild{parent__in:parent_ids}'
         ])
-        query_9 = parser.parse('tests.testmodelchild{parent_id__in: (1,3)}')
+        query_9 = parser.parse('tests.testmodelchild{parent_id__in: [1,3]}')
+        self.assertEqual(query_9[0], query_7[0])
         self.assertEqual(query_9[0], query_8[0])
 
         # Testing icontains, for fun
@@ -158,7 +173,7 @@ class TestORML(TestCase):
 
         a = parser.parse(["""
             tests.testmodel{note__icontains: "test model"}
-            [
+            [{
                 diff: (MaxFloat(val) - Avg(val)),
                 avg: Avg(val),
                 sum: Sum(val),
@@ -166,7 +181,7 @@ class TestORML(TestCase):
                 max: Max(val),
                 count: Count(id),
                 t_distinct: CountDistinct(t)
-            ]""", ])
+            }]""", ])
         self.assertEqual(a['diff'], 20.0)
         self.assertEqual(a['avg'], 30)
         self.assertEqual(a['sum'], 90)

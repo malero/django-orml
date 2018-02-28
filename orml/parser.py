@@ -15,7 +15,7 @@ from orml.utils import average, max_float, count_distinct, \
 precedence = (
     ('left',  'AND', 'OR'),
     ('left', 'COMMA', 'PERIOD',),
-    ('left', 'COLON',),
+    ('left', 'COLON', 'LBRACKET', 'RBRACKET'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE'),
     ('left', 'SEMICOLON'),
@@ -71,9 +71,14 @@ def p_scope(t):
 
 
 def p_expression_query_filter(t):
-    'expression : scope query'
+    """expression : scope query
+                  | scope dict
+    """
     if type(t[1]) is ModelBase:
-        t[0] = t[1].objects.filter(t[2])
+        if type(t[2]) is dict:
+            t[0] = t[1].objects.filter(**t[2])
+        else:
+            t[0] = t[1].objects.filter(t[2])
 
 
 def p_expression_func(t):
@@ -124,6 +129,7 @@ def p_expression_types(t):
                | querychain
                | query
                | scope
+               | argskwargs
     """
     t[0] = t[1]
 
@@ -144,26 +150,42 @@ def p_expression_name(t):
         t[0] = name
 
 
-def p_dict(t):
-    'dict : NAME COLON expression'
+def p_statement(t):
+    'statement : expression SEMICOLON'
+    t[0] = t[1]
+
+
+def p_raw_dict(t):
+    'raw_dict : NAME COLON expression'
     t[0] = {}
     t[0][t[1]] = t[3]
 
 
-def p_dict_chain(t):
-    'dict : dict COMMA dict'
+def p_raw_dict_chain(t):
+    'raw_dict : raw_dict COMMA raw_dict'
     t[1].update(t[3])
     t[0] = t[1]
 
 
-def p_list(t):
-    'list : expression COMMA expression'
+def p_argskwargs(t):
+    """argskwargs : raw_list COMMA raw_dict
+                  | argskwargs COMMA raw_dict
+    """
     if type(t[1]) is list and type(t[3]) is dict:
         argskwargs = ArgsKwargs()
         argskwargs.add(t[1])
-        argskwargs.add(t[3])
-        t[0] = argskwargs
-    elif type(t[1]) is list:
+    else:
+        argskwargs = t[1]
+    argskwargs.add(t[3])
+    t[0] = argskwargs
+
+
+def p_raw_list(t):
+    """raw_list : expression COMMA expression
+                | raw_list COMMA expression
+                | raw_list COMMA raw_list
+    """
+    if type(t[1]) is list:
         t[1].append(t[3])
         t[0] = t[1]
     elif type(t[3]) is list:
@@ -173,10 +195,31 @@ def p_list(t):
         t[0] = [t[1], t[3], ]
 
 
+def p_list(t):
+    """list : LBRACKET raw_list RBRACKET"""
+    t[0] = t[2]
+
+
+def p_list_piped(t):
+    """list : expression PIPE list
+            | expression PIPE NAME
+            | expression PIPE INT
+    """
+    if type(t[3]) is list:
+        t[0] = [[l[n] for n in t[3]] for l in t[1]]
+    elif type(t[3]) is str:
+        t[0] = [l.get(t[3]) for l in t[1]]
+    elif type(t[3]) is int:
+        t[0] = [l[t[3]] for l in t[1]]
+
+
 def p_accessor(t):
     """accessor : expression LBRACKET expression RBRACKET
+                | expression LBRACKET raw_list RBRACKET
     """
-    if isinstance(t[1], QuerySet):
+    if type(t[1]) is list and type(t[3]) is int:
+        t[0] = t[1][t[3]]
+    elif isinstance(t[1], QuerySet):
         values, aggregate_args, aggregate_kwargs = split_queryset_arguments(t[3])
         distinct = False
         if len(values):
@@ -206,12 +249,17 @@ def p_accessor(t):
 
 
 def p_querychain(t):
-    """querychain : dict OR dict"""
+    """querychain : raw_dict OR raw_dict
+                  | raw_dict OR dict
+                  | dict OR raw_dict
+                  | dict OR dict
+    """
     t[0] = Q(**t[1]) | Q(**t[3])
 
 
 def p_querychain_or_dict(t):
-    """querychain : querychain OR dict
+    """querychain : querychain OR raw_dict
+                  | querychain OR dict
     """
     t[0] = t[1] | Q(**t[3])
 
@@ -222,15 +270,15 @@ def p_querychain_or_querychain(t):
 
 
 def p_query(t):
-    """query : LQBRACKET expression RQBRACKET
-    """
+    """query : LQBRACKET querychain RQBRACKET
+        """
     t[0] = t[2]
 
 
 def p_query_dict(t):
-    """query : LQBRACKET dict RQBRACKET
+    """dict : LQBRACKET raw_dict RQBRACKET
     """
-    t[0] = Q(**t[2])
+    t[0] = t[2]
 
 
 def p_error(t):
