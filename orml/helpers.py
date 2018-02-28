@@ -123,3 +123,6 @@ class ArgsKwargs:
         elif isinstance(a, ArgsKwargs):
             self.args += a.args
             self.kwargs.update(a.kwargs)
+
+    def get(self, name):
+        return self.kwargs.get(name)
