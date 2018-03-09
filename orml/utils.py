@@ -1,6 +1,6 @@
 try:
     from dateparser import parser as parse_date
-except ModuleNotFoundError:
+except ImportError:
     from django.utils.dateparse import parse_date
 
 from django.db.models import Max, FloatField, Count, Aggregate
