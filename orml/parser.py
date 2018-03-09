@@ -11,7 +11,6 @@ from orml.utils import average, max_float, count_distinct, \
     split_queryset_arguments, count_all
 
 # Parsing rules
-
 precedence = (
     ('left',  'AND', 'OR'),
     ('left', 'COMMA', 'PERIOD',),
@@ -22,8 +21,6 @@ precedence = (
     ('right', 'UMINUS'),
 )
 
-multiparser = None
-
 def p_statement_equals(t):
     'statement : expression EQUALS expression'
     t[0] = t[1] == t[3]
@@ -31,7 +28,7 @@ def p_statement_equals(t):
 
 def p_statement_assign(t):
     'statement : NAME ASSIGN expression'
-    multiparser.set(t[1], t[3])
+    t.lexer.scope.set(t[1], t[3])
 
 
 def p_statement_expr(t):
@@ -62,8 +59,8 @@ def p_scope(t):
     """
     if type(t[1]) is str:
         name = t[1]
-        if multiparser.has(name):
-            scope = multiparser.get(name)
+        if t.lexer.scope.has(name):
+            scope = t.lexer.scope.get(name)
             if isinstance(scope, Scope) or isinstance(scope, dict):
                 t[0] = scope.get(t[3])
     else:
@@ -144,8 +141,8 @@ def p_expression_accessor(t):
 def p_expression_name(t):
     """expression : NAME"""
     name = t[1]
-    if multiparser.has(name):
-        t[0] = multiparser.get(name)
+    if t.lexer.scope.has(name):
+        t[0] = t.lexer.scope.get(name)
     else:
         t[0] = name
 
@@ -289,6 +286,5 @@ parser = yacc.yacc()
 
 
 def parse(statements, user=None):
-    global multiparser
     multiparser = MultiParser(parser, user)
     return multiparser.parse(statements)
