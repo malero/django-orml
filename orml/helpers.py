@@ -1,4 +1,8 @@
+import ply.lex as lex
+
 from django.contrib.contenttypes.models import ContentType
+
+from orml import lexer
 
 
 class Scope:
@@ -64,6 +68,10 @@ class MultiParser:
         # Yacc Parser
         self.parser = parser
 
+        # Lexer
+        self.lexer = lex.lex(module=lexer)
+        self.lexer.scope = self
+
     def app_exists(self, label):
         if label in self.protected and isinstance(self.protected[label], App):
             return True
@@ -83,7 +91,7 @@ class MultiParser:
             statements = statements.split('\n')
         for s in statements:
             if not s: continue
-            self.stack.append(self.parser.parse(s))
+            self.stack.append(self.parser.parse(s, lexer=self.lexer))
 
         # Assign last stack statement result as multi parser result
         self.result = self.stack[-1]
