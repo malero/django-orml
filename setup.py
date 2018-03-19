@@ -15,7 +15,7 @@ def find_packages(path, prefix=""):
 setup(
   name = 'django-orml',
   packages = list(find_packages(orml.__path__, orml.__name__)),
-  version = '0.1.5',
+  version = '0.1.6',
   description = 'Django Object Relational Mapping Language',
   author = 'Matt Roberts',
   author_email = 'contact@maleero.com',

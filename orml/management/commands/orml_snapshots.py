@@ -15,7 +15,6 @@ class Command(BaseCommand):
         for snapshot in Snapshot.objects.select_related('query').filter(save_meta=True):
             try:
                 result = parse(snapshot.query.query)
-                print(result)
                 for r in result:
                     if isinstance(r, ModelBase):
                         r = model_to_dict(r)
